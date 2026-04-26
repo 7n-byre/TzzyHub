@@ -1,4 +1,4 @@
--- [[ Tzzy Hub | VERSÃO FINAL & COMPLETA ]] --
+-- [[ Tzzy Hub | VERSÃO 7ZADA COMPLETA ]] --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local lp = game.Players.LocalPlayer
@@ -6,7 +6,7 @@ local runService = game:GetService("RunService")
 local camera = workspace.CurrentCamera
 local Webhook_URL = "https://discord.com/api/webhooks/1498063422657400863/xW3OVmmfUooDLnXd-tPCr30eixgAvQB1qIRfxrc32JVaSHw3nHvMmfG1l9DsXedrOXJX"
 
--- // CONFIGURAÇÕES GLOBAIS // --
+-- // INICIALIZAÇÃO DE VARIÁVEIS // --
 _G.GlideEnabled = false
 _G.GlideSpeed = 2.2
 _G.FlyEnabled = false
@@ -53,14 +53,14 @@ local function SendLog(status, key)
     end)
 end
 
--- // JANELA PRINCIPAL // --
+-- // CRIAÇÃO DA JANELA // --
 local Window = Rayfield:CreateWindow({
    Name = "Tzzy Hub | Sintonia Rp",
-   LoadingTitle = "Iniciando Sistema...",
+   LoadingTitle = "Iniciando Protocolo Tzzy...",
    LoadingSubtitle = "By 7n / 7zada",
    KeySystem = true,
    KeySettings = {
-      Title = "Autenticação Tzzy Hub",
+      Title = "Autenticação",
       Key = {"TZZY-ADMIN-7N", "TZZY-A1B2", "TZZY-C3D4", "TZZY-E5F6", "TZZY-G7H8", "TZZY-I9J0", "TZZY-K1L2", "TZZY-M3N4", "TZZY-O5P6", "TZZY-Q7R8", "TZZY-S9T0"},
       Actions = {
          OnEnter = function(v)
@@ -73,23 +73,28 @@ local Window = Rayfield:CreateWindow({
    }
 })
 
--- // ABAS // --
+--- // ABA MOVIMENTAÇÃO // ---
 local TabMov = Window:CreateTab("Movimentação")
 TabMov:CreateToggle({Name = "Speed Glide", CurrentValue = false, Callback = function(v) _G.GlideEnabled = v end})
 TabMov:CreateSlider({Name = "Velocidade Glide", Range = {1, 15}, Increment = 0.5, CurrentValue = 2.2, Callback = function(v) _G.GlideSpeed = v end})
 TabMov:CreateToggle({Name = "Fly Stealth", CurrentValue = false, Callback = function(v) _G.FlyEnabled = v end})
+TabMov:CreateSlider({Name = "Velocidade Fly", Range = {1, 10}, Increment = 0.5, CurrentValue = 2.5, Callback = function(v) _G.FlySpeed = v end})
 
+--- // ABA AUTO FARM // ---
 local TabFarm = Window:CreateTab("Auto Farm")
-TabFarm:CreateToggle({Name = "Auto Lixo 2.2", Info = "Anti-Stuck", CurrentValue = false, Callback = function(v) _G.AutoLixo = v end})
+TabFarm:CreateToggle({Name = "Auto Lixo 2.2", Info = "Anti-Stuck Ativado", CurrentValue = false, Callback = function(v) _G.AutoLixo = v end})
 
+--- // ABA VISUAL & COMBAT // ---
 local TabVisual = Window:CreateTab("Visual & Combat")
 TabVisual:CreateToggle({Name = "Aimbot Suave", CurrentValue = false, Callback = function(v) _G.AimbotEnabled = v end})
-TabVisual:CreateSlider({Name = "Aimbot Smooth", Range = {1, 15}, Increment = 1, CurrentValue = 5, Callback = function(v) _G.AimbotSmoothing = v end})
+TabVisual:CreateSlider({Name = "Suavização", Range = {1, 15}, Increment = 1, CurrentValue = 5, Callback = function(v) _G.AimbotSmoothing = v end})
+TabVisual:CreateToggle({Name = "ESP Box (Global)", CurrentValue = false, Callback = function(v) _G.BoxEsp = v end})
 
+--- // ABA AUTO LOOT // ---
 local TabLoot = Window:CreateTab("Auto Loot")
-TabLoot:CreateToggle({Name = "VAI PEGA E KITA", CurrentValue = false, Callback = function(v) _G.AutoLoot = v end})
+TabLoot:CreateToggle({Name = "VAI PEGA E KITA", Info = "Filtro Ilegal Ativo", CurrentValue = false, Callback = function(v) _G.AutoLoot = v end})
 
--- // LOGICA DE MOVIMENTO // --
+-- // LOOP DE MOVIMENTAÇÃO // --
 runService.RenderStepped:Connect(function()
     local char = lp.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -105,7 +110,7 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // LOGICA AUTO LIXO // --
+-- // LOOP AUTO LIXO // --
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoLixo and lp.Character then
@@ -134,7 +139,7 @@ task.spawn(function()
     end
 end)
 
--- // LOGICA AUTO LOOT // --
+-- // LOOP AUTO LOOT (PEGA E KITA) // --
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoLoot and lp.Character then
@@ -148,7 +153,7 @@ task.spawn(function()
                     for _, b in pairs(BlacklistKeywords) do if txt:find(b) then ban = true break end end
                     if ileg and not ban then
                         local target = v.Parent:IsA("BasePart") and v.Parent or v.Parent:FindFirstChildWhichIsA("BasePart")
-                        if target and target.Size.Magnitude < 10 then
+                        if target and target.Size.Magnitude < 15 then
                             lp.Character.HumanoidRootPart.CFrame = target.CFrame
                             task.wait(0.1)
                             fireproximityprompt(v)
@@ -162,7 +167,7 @@ task.spawn(function()
     end
 end)
 
--- // LOGICA AIMBOT // --
+-- // LOOP AIMBOT // --
 runService.RenderStepped:Connect(function()
     if _G.AimbotEnabled then
         local target = nil
@@ -180,4 +185,4 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
-Rayfield:Notify({Title = "Tzzy Hub", Content = "Script pronto e operacional!", Duration = 5})
+Rayfield:Notify({Title = "Tzzy Hub", Content = "SISTEMA COMPLETO OPERACIONAL!", Duration = 5})
