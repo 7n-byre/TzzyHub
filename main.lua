@@ -1,4 +1,4 @@
--- [[ Tzzy Hub | Oficial Completo ]] --
+-- [[ Tzzy Hub | Oficial 7n ]] --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local lp = game.Players.LocalPlayer
@@ -31,7 +31,8 @@ local function SendLog(status, key)
                     {["name"] = "Key:", ["value"] = key, ["inline"] = true},
                     {["name"] = "Status:", ["value"] = status, ["inline"] = false},
                     {["name"] = "Expira em:", ["value"] = expira, ["inline"] = false}
-                }
+                },
+                ["footer"] = {["text"] = os.date("%d/%m/%Y às %H:%M:%S")}
             }}
         }
         request({Url = Webhook_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = game:GetService("HttpService"):JSONEncode(data)})
@@ -39,22 +40,25 @@ local function SendLog(status, key)
 end
 
 -- // CONFIGURAÇÕES GLOBAIS // --
-local _G = {
-    GlideEnabled = false, GlideSpeed = 2.2,
-    FlyEnabled = false, FlySpeed = 2.5,
-    AutoLoot = false, BoxEsp = false,
-    AimbotEnabled = false, AimbotSmoothing = 5,
-    FOVRadius = 150, AutoLixo = false
-}
+_G.GlideEnabled = false
+_G.GlideSpeed = 2.2
+_G.FlyEnabled = false
+_G.FlySpeed = 2.5
+_G.AutoLoot = false
+_G.BoxEsp = false
+_G.AimbotEnabled = false
+_G.AimbotSmoothing = 5
+_G.FOVRadius = 150
+_G.AutoLixo = false
 
 local lixosColetados = {}
 local IlegalKeywords = {"dinheirosujo", "dinheiro sujo", "glock", "g18", "ak47", "ak-47", "fuzil", "m4a1", "pistola", "revolver", "dmr", "desert", "deagle", "money", "saco", "maleta", "maconha", "coca", "droga", "tablete", "trouxa", "lsd", "crack", "meta", "algema", "lockpick", "colete", "munição", "pente"}
 local BlacklistKeywords = {"arsenal", "equipar", "pegar", "policia", "pm", "civil", "prf", "guardar", "bancada", "abrir"}
 
--- // SISTEMA DE KEY // --
+-- // JANELA PRINCIPAL // --
 local Window = Rayfield:CreateWindow({
    Name = "Tzzy Hub | Sintonia Rp",
-   LoadingTitle = "Carregando Scripts...",
+   LoadingTitle = "Iniciando Tzzy Hub...",
    LoadingSubtitle = "By 7n / 7zada",
    KeySystem = true,
    KeySettings = {
@@ -65,22 +69,24 @@ local Window = Rayfield:CreateWindow({
             local d = os.date("*t")
             if v == "TZZY-ADMIN-7N" then SendLog("Acesso Permitido", v)
             elseif KeysValidas[v] and (d.month < KeysValidas[v].mes or (d.month == KeysValidas[v].mes and d.day <= KeysValidas[v].dia)) then SendLog("Acesso Permitido", v)
-            else SendLog("Acesso Negado/Expirado", v) lp:Kick("Key Inválida!") end
+            else SendLog("Acesso Negado/Expirado", v) lp:Kick("Key Inválida ou Expirada!") end
          end
       }
    }
 })
 
--- // ABA MOVIMENTAÇÃO // --
+-- // MOVIMENTAÇÃO // --
 local TabMov = Window:CreateTab("Movimentação")
 TabMov:CreateToggle({Name = "Speed Glide", CurrentValue = false, Callback = function(v) _G.GlideEnabled = v end})
-TabMov:CreateSlider({Name = "Velocidade", Range = {1, 15}, Increment = 0.5, CurrentValue = 2.2, Callback = function(v) _G.GlideSpeed = v end})
+TabMov:CreateSlider({Name = "Velocidade Glide", Range = {1, 15}, Increment = 0.5, CurrentValue = 2.2, Callback = function(v) _G.GlideSpeed = v end})
 TabMov:CreateToggle({Name = "Fly Stealth", CurrentValue = false, Callback = function(v) _G.FlyEnabled = v end})
+TabMov:CreateSlider({Name = "Velocidade Fly", Range = {1, 3.5}, Increment = 0.1, CurrentValue = 2.5, Callback = function(v) _G.FlySpeed = v end})
 
 runService.RenderStepped:Connect(function()
-    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = lp.Character.HumanoidRootPart
-        local hum = lp.Character.Humanoid
+    local char = lp.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hrp and hum then
         if _G.GlideEnabled and not _G.FlyEnabled and hum.MoveDirection.Magnitude > 0 then
             hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (_G.GlideSpeed / 6))
         end
@@ -91,9 +97,9 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // ABA AUTO FARM // --
+-- // AUTO FARM // --
 local TabFarm = Window:CreateTab("Auto Farm")
-TabFarm:CreateToggle({Name = "Auto Lixo 2.2", Info = "Anti-Stuck Ativado", CurrentValue = false, Callback = function(v) _G.AutoLixo = v end})
+TabFarm:CreateToggle({Name = "Auto Lixo 2.2", Info = "Teleporte + Anti-Stuck", CurrentValue = false, Callback = function(v) _G.AutoLixo = v end})
 
 task.spawn(function()
     while task.wait(0.1) do
@@ -122,14 +128,32 @@ task.spawn(function()
     end
 end)
 
--- // ABA VISUAL & COMBAT // --
+-- // VISUAL & COMBAT // --
 local TabVisual = Window:CreateTab("Visual & Combat")
 TabVisual:CreateToggle({Name = "ESP Caixa (Global)", CurrentValue = false, Callback = function(v) _G.BoxEsp = v end})
 TabVisual:CreateToggle({Name = "Aimbot Suave", CurrentValue = false, Callback = function(v) _G.AimbotEnabled = v end})
+TabVisual:CreateSlider({Name = "Suavização Aimbot", Range = {1, 15}, Increment = 1, CurrentValue = 5, Callback = function(v) _G.AimbotSmoothing = v end})
 
--- // ABA AUTO LOOT // --
+runService.RenderStepped:Connect(function()
+    if _G.AimbotEnabled then
+        local target = nil
+        local dist = _G.FOVRadius
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local pos, screen = camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                if screen then
+                    local mDist = (Vector2.new(pos.X, pos.Y) - Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)).Magnitude
+                    if mDist < dist then dist = mDist target = p end
+                end
+            end
+        end
+        if target then camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, target.Character.HumanoidRootPart.Position), 1/_G.AimbotSmoothing) end
+    end
+end)
+
+-- // AUTO LOOT // --
 local TabLoot = Window:CreateTab("Auto Loot")
-TabLoot:CreateToggle({Name = "VAI PEGA E KITA", Info = "Filtro Anti-Arsenal", CurrentValue = false, Callback = function(v) _G.AutoLoot = v end})
+TabLoot:CreateToggle({Name = "VAI PEGA E KITA", Info = "Filtro Ilegal + Anti-PM", CurrentValue = false, Callback = function(v) _G.AutoLoot = v end})
 
 task.spawn(function()
     while task.wait(0.1) do
@@ -147,7 +171,7 @@ task.spawn(function()
                         if target and target.Size.Magnitude < 10 then
                             lp.Character.HumanoidRootPart.CFrame = target.CFrame
                             fireproximityprompt(v)
-                            lp:Kick("Item Coletado! 🍀")
+                            lp:Kick("Item Coletado com Sucesso! 🍀")
                             break
                         end
                     end
@@ -157,4 +181,4 @@ task.spawn(function()
     end
 end)
 
-Rayfield:Notify({Title = "Tzzy Hub", Content = "Tudo restaurado, 7n!", Duration = 5})
+Rayfield:Notify({Title = "Tzzy Hub", Content = "Script Restaurado e Operacional!", Duration = 5})
