@@ -77,7 +77,7 @@ local stuckTimer = 0
 local IlegalKeywords = {"dinheirosujo", "dinheiro sujo", "glock", "g18", "ak47", "ak-47", "fuzil", "m4a1", "pistola", "revolver", "dmr", "desert", "deagle", "money", "saco", "maleta", "maconha", "coca", "droga", "tablete", "trouxa", "lsd", "crack", "meta", "algema", "lockpick", "colete", "munição", "pente"}
 local BlacklistKeywords = {"arsenal", "equipar", "pegar", "policia", "pm", "civil", "prf", "guardar", "bancada", "abrir"}
 
--- // LÓGICA DE AUTO FARM (INFINITO E ANTI-TRAVA) // --
+-- // LÓGICA DE AUTO FARM (INFINITO E RESISTENTE) // --
 runService.RenderStepped:Connect(function()
     if _G.AutoFarmLixo then
         local char = lp.Character
@@ -85,10 +85,10 @@ runService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChild("Humanoid")
         
         if hrp and hum then
-            -- Verifica se está travado
-            if (hrp.Position - lastPos).Magnitude < 0.1 then
+            -- Verifica se o char travou
+            if (hrp.Position - lastPos).Magnitude < 0.1 and not coletando then
                 stuckTimer = stuckTimer + 1
-                if stuckTimer > 50 then -- Se ficar parado muito tempo, pula
+                if stuckTimer > 60 then 
                     hum.Jump = true
                     stuckTimer = 0
                 end
@@ -97,17 +97,20 @@ runService.RenderStepped:Connect(function()
             end
             lastPos = hrp.Position
 
-            -- Procura o próximo lixo se não tiver um alvo válido
+            -- Busca novo alvo
             if not targetLixo or not targetLixo.Parent or not targetLixo.Enabled then
                 targetLixo = nil
                 coletando = false
                 local shortestDist = math.huge
+                local encontrouLixo = false
+
                 for _, v in pairs(workspace:GetDescendants()) do
                     if v:IsA("ProximityPrompt") and not LixosColetados[v] and v.Enabled then
                         local name = (v.ObjectText .. v.ActionText .. v.Parent.Name):lower()
                         if name:find("lixo") or name:find("recicl") then
                             local pos = v.Parent:IsA("Model") and v.Parent:GetModelCFrame().p or v.Parent:IsA("BasePart") and v.Parent.Position
                             if pos then
+                                encontrouLixo = true
                                 local dist = (hrp.Position - pos).Magnitude
                                 if dist < shortestDist then
                                     shortestDist = dist
@@ -117,23 +120,30 @@ runService.RenderStepped:Connect(function()
                         end
                     end
                 end
+
+                -- Se não achou nenhum lixo novo, limpa a lista para farmar os mesmos de novo (Infinito)
+                if not encontrouLixo and next(LixosColetados) ~= nil then
+                    LixosColetados = {}
+                end
             end
 
             if targetLixo and not coletando then
                 local targetPos = targetLixo.Parent:IsA("Model") and targetLixo.Parent:GetModelCFrame().p or targetLixo.Parent.Position
                 local distance = (hrp.Position - targetPos).Magnitude
 
-                if distance > 2.5 then
-                    -- Vai até o lixo
+                if distance > 2.2 then
                     local direction = (targetPos - hrp.Position).Unit
                     hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / 6.5))
                 else
-                    -- Chegou: Fica parado coletando até o prompt sumir
+                    -- FICA PARADO ATÉ COLETAR
                     coletando = true
                     task.spawn(function()
-                        while targetLixo and targetLixo.Enabled do
+                        while targetLixo and targetLixo.Enabled and targetLixo.Parent do
                             fireproximityprompt(targetLixo)
-                            task.wait(0.2)
+                            task.wait(0.1) -- Spam rápido para garantir a coleta
+                            if (hrp.Position - targetPos).Magnitude > 3 then -- Caso seja empurrado
+                                hrp.CFrame = CFrame.new(targetPos)
+                            end
                         end
                         LixosColetados[targetLixo] = true
                         targetLixo = nil
@@ -145,7 +155,7 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // MOVIMENTAÇÃO // --
+-- // MOVIMENTAÇÃO (MANTIDA) // --
 runService.RenderStepped:Connect(function()
     local char = lp.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -168,7 +178,7 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // AUTO LOOT // --
+-- // AUTO LOOT (MANTIDA) // --
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoLoot and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
@@ -207,7 +217,7 @@ task.spawn(function()
     end
 end)
 
--- // ESP E AIMBOT // --
+-- // ESP E AIMBOT (MANTIDOS) // --
 local function ApplyESP(target)
     local pgui = lp:WaitForChild("PlayerGui")
     runService.RenderStepped:Connect(function()
