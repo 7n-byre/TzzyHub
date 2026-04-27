@@ -71,19 +71,13 @@ local camera = workspace.CurrentCamera
 local LixosColetados = {}
 local targetLixo = nil
 local coletando = false
-
--- Reset infinito: limpa a lista a cada 2 minutos para evitar travas no farm
-task.spawn(function()
-    while true do
-        task.wait(120)
-        LixosColetados = {}
-    end
-end)
+local lastPos = Vector3.new(0,0,0)
+local stuckTimer = 0
 
 local IlegalKeywords = {"dinheirosujo", "dinheiro sujo", "glock", "g18", "ak47", "ak-47", "fuzil", "m4a1", "pistola", "revolver", "dmr", "desert", "deagle", "money", "saco", "maleta", "maconha", "coca", "droga", "tablete", "trouxa", "lsd", "crack", "meta", "algema", "lockpick", "colete", "munição", "pente"}
 local BlacklistKeywords = {"arsenal", "equipar", "pegar", "policia", "pm", "civil", "prf", "guardar", "bancada", "abrir"}
 
--- // LÓGICA DE AUTO FARM (INFINITO) // --
+-- // LÓGICA DE AUTO FARM (INFINITO E ANTI-TRAVA) // --
 runService.RenderStepped:Connect(function()
     if _G.AutoFarmLixo then
         local char = lp.Character
@@ -91,6 +85,19 @@ runService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChild("Humanoid")
         
         if hrp and hum then
+            -- Verifica se está travado
+            if (hrp.Position - lastPos).Magnitude < 0.1 then
+                stuckTimer = stuckTimer + 1
+                if stuckTimer > 50 then -- Se ficar parado muito tempo, pula
+                    hum.Jump = true
+                    stuckTimer = 0
+                end
+            else
+                stuckTimer = 0
+            end
+            lastPos = hrp.Position
+
+            -- Procura o próximo lixo se não tiver um alvo válido
             if not targetLixo or not targetLixo.Parent or not targetLixo.Enabled then
                 targetLixo = nil
                 coletando = false
@@ -116,15 +123,18 @@ runService.RenderStepped:Connect(function()
                 local targetPos = targetLixo.Parent:IsA("Model") and targetLixo.Parent:GetModelCFrame().p or targetLixo.Parent.Position
                 local distance = (hrp.Position - targetPos).Magnitude
 
-                if distance > 2.2 then
+                if distance > 2.5 then
+                    -- Vai até o lixo
                     local direction = (targetPos - hrp.Position).Unit
                     hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / 6.5))
-                    if hrp.Velocity.Magnitude < 0.2 then hum.Jump = true end
                 else
+                    -- Chegou: Fica parado coletando até o prompt sumir
                     coletando = true
-                    fireproximityprompt(targetLixo)
                     task.spawn(function()
-                        task.wait(0.4)
+                        while targetLixo and targetLixo.Enabled do
+                            fireproximityprompt(targetLixo)
+                            task.wait(0.2)
+                        end
                         LixosColetados[targetLixo] = true
                         targetLixo = nil
                         coletando = false
