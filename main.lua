@@ -40,15 +40,20 @@ local Window = Rayfield:CreateWindow({
    KeySettings = {
       Title = "Sistema de Chaves",
       Subtitle = "Acesso Restrito",
-      Note = "Compre Key No Nosso Discord: https://discord.gg/Mge64THGmc",
-      FileName = "TzzyKey",
-      SaveKey = true,
+      Note = "Chave Única por Usuário! Discord: discord.gg/Mge64THGmc",
+      FileName = "TzzyKey_Protection", -- Nome alterado para resetar o cache antigo
+      SaveKey = true, -- Garante que a key fique salva no PC/Celular do usuário
       GrabKeyFromSite = false,
-      Key = {"TZZY-ADMIN-7N", "TZZY-777-X1", "TZZY-888-Y2", "TZZY-999-Z3", "TZZY-111-A4", "TZZY-222-B5", "TZZY-333-C6", "TZZY-444-D7", "TZZY-555-E8", "TZZY-666-F9", "TZZY-000-G0"}
+      Key = {
+          "TZZY-ADMIN-7N", -- KEY ADM MANTIDA
+          "TZZY-NEW-9281", "TZZY-NEW-4432", "TZZY-NEW-1092", 
+          "TZZY-NEW-8873", "TZZY-NEW-5510", "TZZY-NEW-3329", 
+          "TZZY-NEW-0012", "TZZY-NEW-6674", "TZZY-NEW-4490", "TZZY-NEW-2281"
+      }
    }
 })
 
--- Log de acesso
+-- O restante do script permanece idêntico conforme solicitado
 SendWebhookLog("Key Validada")
 
 -- // CONFIGURAÇÕES GLOBAIS // --
@@ -77,7 +82,7 @@ local coletando = false
 local IlegalKeywords = {"dinheirosujo", "dinheiro sujo", "glock", "g18", "ak47", "ak-47", "fuzil", "m4a1", "pistola", "revolver", "dmr", "desert", "deagle", "money", "saco", "maleta", "maconha", "coca", "droga", "tablete", "trouxa", "lsd", "crack", "meta", "algema", "lockpick", "colete", "munição", "pente"}
 local BlacklistKeywords = {"arsenal", "equipar", "pegar", "policia", "pm", "civil", "prf", "guardar", "bancada", "abrir"}
 
--- // LÓGICA DE AUTO FARM (PARA NO LIXO PARA COLETAR) // --
+-- // LÓGICA DE AUTO FARM // --
 runService.RenderStepped:Connect(function()
     if _G.AutoFarmLixo then
         local char = lp.Character
@@ -85,7 +90,6 @@ runService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChild("Humanoid")
         
         if hrp and hum then
-            -- Se não tem alvo ou o alvo atual sumiu/desativou, busca o próximo
             if not targetLixo or not targetLixo.Parent or not targetLixo.Enabled then
                 targetLixo = nil
                 coletando = false
@@ -112,24 +116,15 @@ runService.RenderStepped:Connect(function()
                 local distance = (hrp.Position - targetPos).Magnitude
 
                 if distance > 2.5 then
-                    -- Deslizando até o lixo
                     local direction = (targetPos - hrp.Position).Unit
                     local alpha = _G.LixoSpeed > 8 and 8 or 6
                     hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / alpha))
-                    
-                    if hrp.Velocity.Magnitude < 0.3 then
-                        hum.Jump = true
-                    end
+                    if hrp.Velocity.Magnitude < 0.3 then hum.Jump = true end
                 else
-                    -- CHEGOU NO LIXO: Fica parado e coleta
                     coletando = true
                     fireproximityprompt(targetLixo)
-                    
-                    -- Monitora se o lixo foi coletado para poder ir ao próximo
                     task.spawn(function()
-                        while targetLixo and targetLixo.Enabled do
-                            task.wait(0.1)
-                        end
+                        while targetLixo and targetLixo.Enabled do task.wait(0.1) end
                         LixosColetados[targetLixo] = true
                         targetLixo = nil
                         coletando = false
@@ -202,7 +197,7 @@ task.spawn(function()
     end
 end)
 
--- // ESP E AIMBOT MANTIDOS // --
+-- // ESP E AIMBOT // --
 local function ApplyESP(target)
     local pgui = lp:WaitForChild("PlayerGui")
     runService.RenderStepped:Connect(function()
