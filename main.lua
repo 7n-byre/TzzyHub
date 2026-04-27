@@ -77,7 +77,7 @@ local stuckTimer = 0
 local IlegalKeywords = {"dinheirosujo", "dinheiro sujo", "glock", "g18", "ak47", "ak-47", "fuzil", "m4a1", "pistola", "revolver", "dmr", "desert", "deagle", "money", "saco", "maleta", "maconha", "coca", "droga", "tablete", "trouxa", "lsd", "crack", "meta", "algema", "lockpick", "colete", "munição", "pente"}
 local BlacklistKeywords = {"arsenal", "equipar", "pegar", "policia", "pm", "civil", "prf", "guardar", "bancada", "abrir"}
 
--- // LÓGICA DE AUTO FARM (INFINITO E RESISTENTE) // --
+-- // LÓGICA DE AUTO FARM (CORREÇÃO DE BUG INDO E VOLTANDO) // --
 runService.RenderStepped:Connect(function()
     if _G.AutoFarmLixo then
         local char = lp.Character
@@ -85,10 +85,10 @@ runService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChild("Humanoid")
         
         if hrp and hum then
-            -- Verifica se o char travou
-            if (hrp.Position - lastPos).Magnitude < 0.1 and not coletando then
+            -- Sistema Anti-Stuck (Pula se ficar parado ou tentando chegar no lixo e não conseguir)
+            if (hrp.Position - lastPos).Magnitude < 0.05 then
                 stuckTimer = stuckTimer + 1
-                if stuckTimer > 60 then 
+                if stuckTimer > 40 then 
                     hum.Jump = true
                     stuckTimer = 0
                 end
@@ -97,12 +97,12 @@ runService.RenderStepped:Connect(function()
             end
             lastPos = hrp.Position
 
-            -- Busca novo alvo
+            -- Busca novo alvo se necessário
             if not targetLixo or not targetLixo.Parent or not targetLixo.Enabled then
                 targetLixo = nil
                 coletando = false
                 local shortestDist = math.huge
-                local encontrouLixo = false
+                local encontrouAlgo = false
 
                 for _, v in pairs(workspace:GetDescendants()) do
                     if v:IsA("ProximityPrompt") and not LixosColetados[v] and v.Enabled then
@@ -110,7 +110,7 @@ runService.RenderStepped:Connect(function()
                         if name:find("lixo") or name:find("recicl") then
                             local pos = v.Parent:IsA("Model") and v.Parent:GetModelCFrame().p or v.Parent:IsA("BasePart") and v.Parent.Position
                             if pos then
-                                encontrouLixo = true
+                                encontrouAlgo = true
                                 local dist = (hrp.Position - pos).Magnitude
                                 if dist < shortestDist then
                                     shortestDist = dist
@@ -120,9 +120,9 @@ runService.RenderStepped:Connect(function()
                         end
                     end
                 end
-
-                -- Se não achou nenhum lixo novo, limpa a lista para farmar os mesmos de novo (Infinito)
-                if not encontrouLixo and next(LixosColetados) ~= nil then
+                
+                -- Reset para farm infinito se limpar o mapa
+                if not encontrouAlgo and next(LixosColetados) ~= nil then
                     LixosColetados = {}
                 end
             end
@@ -131,19 +131,25 @@ runService.RenderStepped:Connect(function()
                 local targetPos = targetLixo.Parent:IsA("Model") and targetLixo.Parent:GetModelCFrame().p or targetLixo.Parent.Position
                 local distance = (hrp.Position - targetPos).Magnitude
 
-                if distance > 2.2 then
+                -- Se estiver longe, move. Se estiver perto (2.8 studs), trava para não bugar indo e voltando.
+                if distance > 2.8 then
                     local direction = (targetPos - hrp.Position).Unit
-                    hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / 6.5))
+                    hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / 6))
                 else
-                    -- FICA PARADO ATÉ COLETAR
+                    -- CHEGOU: Trava a posição e pula se necessário enquanto coleta
                     coletando = true
                     task.spawn(function()
+                        local startCollectTime = tick()
                         while targetLixo and targetLixo.Enabled and targetLixo.Parent do
+                            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) -- Trava no lugar
                             fireproximityprompt(targetLixo)
-                            task.wait(0.1) -- Spam rápido para garantir a coleta
-                            if (hrp.Position - targetPos).Magnitude > 3 then -- Caso seja empurrado
-                                hrp.CFrame = CFrame.new(targetPos)
+                            
+                            -- Se demorar mais de 3 segundos na mesma lixeira, dá um pulo para "desbugar"
+                            if tick() - startCollectTime > 3 then
+                                hum.Jump = true
+                                startCollectTime = tick()
                             end
+                            task.wait(0.1)
                         end
                         LixosColetados[targetLixo] = true
                         targetLixo = nil
@@ -155,7 +161,7 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // MOVIMENTAÇÃO (MANTIDA) // --
+-- // MOVIMENTAÇÃO ORIGINAL MANTIDA // --
 runService.RenderStepped:Connect(function()
     local char = lp.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -178,7 +184,7 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // AUTO LOOT (MANTIDA) // --
+-- // AUTO LOOT ORIGINAL MANTIDO // --
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoLoot and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
@@ -217,7 +223,7 @@ task.spawn(function()
     end
 end)
 
--- // ESP E AIMBOT (MANTIDOS) // --
+-- // ESP E AIMBOT MANTIDOS // --
 local function ApplyESP(target)
     local pgui = lp:WaitForChild("PlayerGui")
     runService.RenderStepped:Connect(function()
