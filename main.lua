@@ -48,7 +48,6 @@ local Window = Rayfield:CreateWindow({
    }
 })
 
--- Log de acesso
 SendWebhookLog("Key Validada")
 
 -- // CONFIGURAÇÕES GLOBAIS // --
@@ -73,15 +72,18 @@ local LixosColetados = {}
 local targetLixo = nil
 local coletando = false
 
--- Limpeza periódica da lista de ignorados para garantir o farm infinito
+-- Reset infinito: limpa a lista a cada 2 minutos para evitar travas no farm
 task.spawn(function()
     while true do
-        task.wait(60) -- Limpa a lista a cada 1 minuto para poder re-coletar lixos que deram respawn
+        task.wait(120)
         LixosColetados = {}
     end
 end)
 
--- // LÓGICA DE AUTO FARM MELHORADA // --
+local IlegalKeywords = {"dinheirosujo", "dinheiro sujo", "glock", "g18", "ak47", "ak-47", "fuzil", "m4a1", "pistola", "revolver", "dmr", "desert", "deagle", "money", "saco", "maleta", "maconha", "coca", "droga", "tablete", "trouxa", "lsd", "crack", "meta", "algema", "lockpick", "colete", "munição", "pente"}
+local BlacklistKeywords = {"arsenal", "equipar", "pegar", "policia", "pm", "civil", "prf", "guardar", "bancada", "abrir"}
+
+-- // LÓGICA DE AUTO FARM (INFINITO) // --
 runService.RenderStepped:Connect(function()
     if _G.AutoFarmLixo then
         local char = lp.Character
@@ -89,14 +91,12 @@ runService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChild("Humanoid")
         
         if hrp and hum then
-            -- Busca novo alvo se não tiver um ou se o atual sumiu
             if not targetLixo or not targetLixo.Parent or not targetLixo.Enabled then
                 targetLixo = nil
                 coletando = false
                 local shortestDist = math.huge
-                
                 for _, v in pairs(workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") and v.Enabled and not LixosColetados[v] then
+                    if v:IsA("ProximityPrompt") and not LixosColetados[v] and v.Enabled then
                         local name = (v.ObjectText .. v.ActionText .. v.Parent.Name):lower()
                         if name:find("lixo") or name:find("recicl") then
                             local pos = v.Parent:IsA("Model") and v.Parent:GetModelCFrame().p or v.Parent:IsA("BasePart") and v.Parent.Position
@@ -117,20 +117,14 @@ runService.RenderStepped:Connect(function()
                 local distance = (hrp.Position - targetPos).Magnitude
 
                 if distance > 2.2 then
-                    -- Movimentação em direção ao lixo
                     local direction = (targetPos - hrp.Position).Unit
-                    hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / 7))
-                    
-                    if hrp.Velocity.Magnitude < 0.1 then
-                        hum.Jump = true
-                    end
+                    hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / 6.5))
+                    if hrp.Velocity.Magnitude < 0.2 then hum.Jump = true end
                 else
-                    -- Chegou: Coleta e marca como coletado
                     coletando = true
                     fireproximityprompt(targetLixo)
-                    
                     task.spawn(function()
-                        task.wait(0.5) -- Tempo de espera para o script reconhecer a coleta
+                        task.wait(0.4)
                         LixosColetados[targetLixo] = true
                         targetLixo = nil
                         coletando = false
@@ -141,7 +135,7 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // MOVIMENTAÇÃO ORIGINAL // --
+-- // MOVIMENTAÇÃO // --
 runService.RenderStepped:Connect(function()
     local char = lp.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -164,7 +158,7 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // AUTO LOOT ORIGINAL // --
+-- // AUTO LOOT // --
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoLoot and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
@@ -174,13 +168,23 @@ task.spawn(function()
                     local rawText = (v.ObjectText .. v.ActionText .. v.Parent.Name):lower()
                     local cleanText = rawText:gsub("%s+", "") 
                     local isIlegal = false
-                    for _, key in pairs({"dinheirosujo", "glock", "ak47", "fuzil", "pistola", "maconha", "coca", "droga", "algema", "lockpick", "colete"}) do
-                        if cleanText:find(key) then isIlegal = true break end
+                    local isBanned = false
+                    for _, key in pairs(IlegalKeywords) do
+                        if cleanText:find(key:gsub("%s+", "")) or rawText:find(key) then
+                            isIlegal = true 
+                            break 
+                        end
                     end
-                    if isIlegal then
+                    for _, bad in pairs(BlacklistKeywords) do
+                        if rawText:find(bad) then
+                            isBanned = true
+                            break
+                        end
+                    end
+                    if isIlegal and not isBanned then
                         local item = v.Parent
                         local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
-                        if targetPart then
+                        if targetPart and targetPart.Size.Magnitude < 10 then
                             root.CFrame = targetPart.CFrame 
                             fireproximityprompt(v)
                             lp:Kick("Você Coletou Um Item 🍀")
@@ -193,6 +197,54 @@ task.spawn(function()
     end
 end)
 
+-- // ESP E AIMBOT // --
+local function ApplyESP(target)
+    local pgui = lp:WaitForChild("PlayerGui")
+    runService.RenderStepped:Connect(function()
+        if _G.BoxEsp and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = target.Character.HumanoidRootPart
+            local bgui = pgui:FindFirstChild("Tzzy_"..target.Name) or Instance.new("BillboardGui", pgui)
+            bgui.Name = "Tzzy_"..target.Name
+            bgui.Adornee = hrp
+            bgui.AlwaysOnTop = true
+            bgui.Size = UDim2.new(4, 0, 5.5, 0)
+            bgui.MaxDistance = 100000 
+            local frame = bgui:FindFirstChild("Main") or Instance.new("Frame", bgui)
+            frame.Name = "Main"
+            frame.Size = UDim2.new(1, 0, 1, 0)
+            frame.BackgroundTransparency = 1
+            local stroke = frame:FindFirstChild("Stroke") or Instance.new("UIStroke", frame)
+            stroke.Thickness = 2.5
+            stroke.Color = Color3.fromRGB(255, 0, 0)
+            bgui.Enabled = true
+        elseif pgui:FindFirstChild("Tzzy_"..target.Name) then
+            pgui:FindFirstChild("Tzzy_"..target.Name).Enabled = false
+        end
+    end)
+end
+
+runService.RenderStepped:Connect(function()
+    if _G.AimbotEnabled then
+        local target = nil
+        local dist = _G.FOVRadius
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local pos, screen = camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                if screen then
+                    local mDist = (Vector2.new(pos.X, pos.Y) - Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)).Magnitude
+                    if mDist < dist then
+                        dist = mDist
+                        target = p
+                    end
+                end
+            end
+        end
+        if target then
+            camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, target.Character.HumanoidRootPart.Position), 1/_G.AimbotSmoothing)
+        end
+    end
+end)
+
 -- // ABAS // --
 local TabFarm = Window:CreateTab("Auto Farm")
 TabFarm:CreateToggle({Name = "Auto Farm Lixo", CurrentValue = false, Callback = function(v) _G.AutoFarmLixo = v end})
@@ -201,9 +253,18 @@ TabFarm:CreateSlider({Name = "Velocidade Farm", Range = {1, 15}, Increment = 0.5
 local TabMov = Window:CreateTab("Movimentação")
 TabMov:CreateToggle({Name = "Speed Glide", CurrentValue = false, Callback = function(v) _G.GlideEnabled = v end})
 TabMov:CreateSlider({Name = "Velocidade Speed", Range = {1, 15}, Increment = 0.5, CurrentValue = 2, Callback = function(v) _G.GlideSpeed = v end})
+TabMov:CreateToggle({Name = "Fly Stealth", CurrentValue = false, Callback = function(v) _G.FlyEnabled = v end})
+TabMov:CreateSlider({Name = "Velocidade Fly", Range = {1, 3.5}, Increment = 0.1, CurrentValue = 2.5, Callback = function(v) _G.FlySpeed = v end})
 
 local TabVisual = Window:CreateTab("Visual & Combat")
+TabVisual:CreateToggle({Name = "ESP Caixa (Global)", CurrentValue = false, Callback = function(v) 
+    _G.BoxEsp = v 
+    if v then for _, p in pairs(game.Players:GetPlayers()) do if p ~= lp then ApplyESP(p) end end end
+end})
 TabVisual:CreateToggle({Name = "Aimbot Suave", CurrentValue = false, Callback = function(v) _G.AimbotEnabled = v end})
+TabVisual:CreateSlider({Name = "Suavização Aimbot", Range = {1, 15}, Increment = 1, CurrentValue = 5, Callback = function(v) _G.AimbotSmoothing = v end})
 
 local TabRoubo = Window:CreateTab("Auto Loot")
-TabRoubo:CreateToggle({Name = "VAI PEGA E KITA", CurrentValue = false, Callback = function(v) _G.AutoLoot = v end})
+TabRoubo:CreateToggle({Name = "VAI PEGA E KITA", Info = "Filtro Anti-Arsenal Ativado", CurrentValue = false, Callback = function(v) _G.AutoLoot = v end})
+
+game.Players.PlayerAdded:Connect(function(p) if _G.BoxEsp then ApplyESP(p) end end)
