@@ -40,20 +40,15 @@ local Window = Rayfield:CreateWindow({
    KeySettings = {
       Title = "Sistema de Chaves",
       Subtitle = "Acesso Restrito",
-      Note = "Chave Única por Usuário! Discord: discord.gg/Mge64THGmc",
-      FileName = "TzzyKey_Protection", -- Nome alterado para resetar o cache antigo
-      SaveKey = true, -- Garante que a key fique salva no PC/Celular do usuário
+      Note = "Compre Key No Nosso Discord: https://discord.gg/Mge64THGmc",
+      FileName = "TzzyKey",
+      SaveKey = true,
       GrabKeyFromSite = false,
-      Key = {
-          "TZZY-ADMIN-7N", -- KEY ADM MANTIDA
-          "TZZY-NEW-9281", "TZZY-NEW-4432", "TZZY-NEW-1092", 
-          "TZZY-NEW-8873", "TZZY-NEW-5510", "TZZY-NEW-3329", 
-          "TZZY-NEW-0012", "TZZY-NEW-6674", "TZZY-NEW-4490", "TZZY-NEW-2281"
-      }
+      Key = {"TZZY-ADMIN-7N", "TZZY-777-X1", "TZZY-888-Y2", "TZZY-999-Z3", "TZZY-111-A4", "TZZY-222-B5", "TZZY-333-C6", "TZZY-444-D7", "TZZY-555-E8", "TZZY-666-F9", "TZZY-000-G0"}
    }
 })
 
--- O restante do script permanece idêntico conforme solicitado
+-- Log de acesso
 SendWebhookLog("Key Validada")
 
 -- // CONFIGURAÇÕES GLOBAIS // --
@@ -78,11 +73,15 @@ local LixosColetados = {}
 local targetLixo = nil
 local coletando = false
 
--- // LISTAS ORIGINAIS // --
-local IlegalKeywords = {"dinheirosujo", "dinheiro sujo", "glock", "g18", "ak47", "ak-47", "fuzil", "m4a1", "pistola", "revolver", "dmr", "desert", "deagle", "money", "saco", "maleta", "maconha", "coca", "droga", "tablete", "trouxa", "lsd", "crack", "meta", "algema", "lockpick", "colete", "munição", "pente"}
-local BlacklistKeywords = {"arsenal", "equipar", "pegar", "policia", "pm", "civil", "prf", "guardar", "bancada", "abrir"}
+-- Limpeza periódica da lista de ignorados para garantir o farm infinito
+task.spawn(function()
+    while true do
+        task.wait(60) -- Limpa a lista a cada 1 minuto para poder re-coletar lixos que deram respawn
+        LixosColetados = {}
+    end
+end)
 
--- // LÓGICA DE AUTO FARM // --
+-- // LÓGICA DE AUTO FARM MELHORADA // --
 runService.RenderStepped:Connect(function()
     if _G.AutoFarmLixo then
         local char = lp.Character
@@ -90,12 +89,14 @@ runService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChild("Humanoid")
         
         if hrp and hum then
+            -- Busca novo alvo se não tiver um ou se o atual sumiu
             if not targetLixo or not targetLixo.Parent or not targetLixo.Enabled then
                 targetLixo = nil
                 coletando = false
                 local shortestDist = math.huge
+                
                 for _, v in pairs(workspace:GetDescendants()) do
-                    if v:IsA("ProximityPrompt") and not LixosColetados[v] and v.Enabled then
+                    if v:IsA("ProximityPrompt") and v.Enabled and not LixosColetados[v] then
                         local name = (v.ObjectText .. v.ActionText .. v.Parent.Name):lower()
                         if name:find("lixo") or name:find("recicl") then
                             local pos = v.Parent:IsA("Model") and v.Parent:GetModelCFrame().p or v.Parent:IsA("BasePart") and v.Parent.Position
@@ -115,16 +116,21 @@ runService.RenderStepped:Connect(function()
                 local targetPos = targetLixo.Parent:IsA("Model") and targetLixo.Parent:GetModelCFrame().p or targetLixo.Parent.Position
                 local distance = (hrp.Position - targetPos).Magnitude
 
-                if distance > 2.5 then
+                if distance > 2.2 then
+                    -- Movimentação em direção ao lixo
                     local direction = (targetPos - hrp.Position).Unit
-                    local alpha = _G.LixoSpeed > 8 and 8 or 6
-                    hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / alpha))
-                    if hrp.Velocity.Magnitude < 0.3 then hum.Jump = true end
+                    hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / 7))
+                    
+                    if hrp.Velocity.Magnitude < 0.1 then
+                        hum.Jump = true
+                    end
                 else
+                    -- Chegou: Coleta e marca como coletado
                     coletando = true
                     fireproximityprompt(targetLixo)
+                    
                     task.spawn(function()
-                        while targetLixo and targetLixo.Enabled do task.wait(0.1) end
+                        task.wait(0.5) -- Tempo de espera para o script reconhecer a coleta
                         LixosColetados[targetLixo] = true
                         targetLixo = nil
                         coletando = false
@@ -168,23 +174,13 @@ task.spawn(function()
                     local rawText = (v.ObjectText .. v.ActionText .. v.Parent.Name):lower()
                     local cleanText = rawText:gsub("%s+", "") 
                     local isIlegal = false
-                    local isBanned = false
-                    for _, key in pairs(IlegalKeywords) do
-                        if cleanText:find(key:gsub("%s+", "")) or rawText:find(key) then
-                            isIlegal = true 
-                            break 
-                        end
+                    for _, key in pairs({"dinheirosujo", "glock", "ak47", "fuzil", "pistola", "maconha", "coca", "droga", "algema", "lockpick", "colete"}) do
+                        if cleanText:find(key) then isIlegal = true break end
                     end
-                    for _, bad in pairs(BlacklistKeywords) do
-                        if rawText:find(bad) then
-                            isBanned = true
-                            break
-                        end
-                    end
-                    if isIlegal and not isBanned then
+                    if isIlegal then
                         local item = v.Parent
                         local targetPart = item:IsA("BasePart") and item or item:FindFirstChildWhichIsA("BasePart")
-                        if targetPart and targetPart.Size.Magnitude < 10 then
+                        if targetPart then
                             root.CFrame = targetPart.CFrame 
                             fireproximityprompt(v)
                             lp:Kick("Você Coletou Um Item 🍀")
@@ -197,54 +193,6 @@ task.spawn(function()
     end
 end)
 
--- // ESP E AIMBOT // --
-local function ApplyESP(target)
-    local pgui = lp:WaitForChild("PlayerGui")
-    runService.RenderStepped:Connect(function()
-        if _G.BoxEsp and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = target.Character.HumanoidRootPart
-            local bgui = pgui:FindFirstChild("Tzzy_"..target.Name) or Instance.new("BillboardGui", pgui)
-            bgui.Name = "Tzzy_"..target.Name
-            bgui.Adornee = hrp
-            bgui.AlwaysOnTop = true
-            bgui.Size = UDim2.new(4, 0, 5.5, 0)
-            bgui.MaxDistance = 100000 
-            local frame = bgui:FindFirstChild("Main") or Instance.new("Frame", bgui)
-            frame.Name = "Main"
-            frame.Size = UDim2.new(1, 0, 1, 0)
-            frame.BackgroundTransparency = 1
-            local stroke = frame:FindFirstChild("Stroke") or Instance.new("UIStroke", frame)
-            stroke.Thickness = 2.5
-            stroke.Color = Color3.fromRGB(255, 0, 0)
-            bgui.Enabled = true
-        elseif pgui:FindFirstChild("Tzzy_"..target.Name) then
-            pgui:FindFirstChild("Tzzy_"..target.Name).Enabled = false
-        end
-    end)
-end
-
-runService.RenderStepped:Connect(function()
-    if _G.AimbotEnabled then
-        local target = nil
-        local dist = _G.FOVRadius
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local pos, screen = camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-                if screen then
-                    local mDist = (Vector2.new(pos.X, pos.Y) - Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)).Magnitude
-                    if mDist < dist then
-                        dist = mDist
-                        target = p
-                    end
-                end
-            end
-        end
-        if target then
-            camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, target.Character.HumanoidRootPart.Position), 1/_G.AimbotSmoothing)
-        end
-    end
-end)
-
 -- // ABAS // --
 local TabFarm = Window:CreateTab("Auto Farm")
 TabFarm:CreateToggle({Name = "Auto Farm Lixo", CurrentValue = false, Callback = function(v) _G.AutoFarmLixo = v end})
@@ -253,18 +201,9 @@ TabFarm:CreateSlider({Name = "Velocidade Farm", Range = {1, 15}, Increment = 0.5
 local TabMov = Window:CreateTab("Movimentação")
 TabMov:CreateToggle({Name = "Speed Glide", CurrentValue = false, Callback = function(v) _G.GlideEnabled = v end})
 TabMov:CreateSlider({Name = "Velocidade Speed", Range = {1, 15}, Increment = 0.5, CurrentValue = 2, Callback = function(v) _G.GlideSpeed = v end})
-TabMov:CreateToggle({Name = "Fly Stealth", CurrentValue = false, Callback = function(v) _G.FlyEnabled = v end})
-TabMov:CreateSlider({Name = "Velocidade Fly", Range = {1, 3.5}, Increment = 0.1, CurrentValue = 2.5, Callback = function(v) _G.FlySpeed = v end})
 
 local TabVisual = Window:CreateTab("Visual & Combat")
-TabVisual:CreateToggle({Name = "ESP Caixa (Global)", CurrentValue = false, Callback = function(v) 
-    _G.BoxEsp = v 
-    if v then for _, p in pairs(game.Players:GetPlayers()) do if p ~= lp then ApplyESP(p) end end end
-end})
 TabVisual:CreateToggle({Name = "Aimbot Suave", CurrentValue = false, Callback = function(v) _G.AimbotEnabled = v end})
-TabVisual:CreateSlider({Name = "Suavização Aimbot", Range = {1, 15}, Increment = 1, CurrentValue = 5, Callback = function(v) _G.AimbotSmoothing = v end})
 
 local TabRoubo = Window:CreateTab("Auto Loot")
-TabRoubo:CreateToggle({Name = "VAI PEGA E KITA", Info = "Filtro Anti-Arsenal Ativado", CurrentValue = false, Callback = function(v) _G.AutoLoot = v end})
-
-game.Players.PlayerAdded:Connect(function(p) if _G.BoxEsp then ApplyESP(p) end end)
+TabRoubo:CreateToggle({Name = "VAI PEGA E KITA", CurrentValue = false, Callback = function(v) _G.AutoLoot = v end})
