@@ -22,12 +22,14 @@ local function SendWebhookLog(keyUsed)
     local jsonData = game:GetService("HttpService"):JSONEncode(data)
     local request = (syn and syn.request) or (http and http.request) or http_request or request
     if request then
-        request({
-            Url = "https://discord.com/api/webhooks/1498087867329675305/Bw9zMvv7W-lBV1D_sj5siUyRO1Uc-DX3VKQwa8miQCl53F3tP-Y2KpHLPf-5kuJZouH3",
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = jsonData
-        })
+        pcall(function()
+            request({
+                Url = "https://discord.com/api/webhooks/1498087867329675305/Bw9zMvv7W-lBV1D_sj5siUyRO1Uc-DX3VKQwa8miQCl53F3tP-Y2KpHLPf-5kuJZouH3",
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = jsonData
+            })
+        end)
     end
 end
 
@@ -44,11 +46,9 @@ local Window = Rayfield:CreateWindow({
       FileName = "TzzyKey",
       SaveKey = true,
       GrabKeyFromSite = false,
-      Key = {"TZZY-ADMIN-7N", "TZZY-777-X1", "TZZY-888-Y2", "TZZY-999-Z3", "TZZY-111-A4", "TZZY-222-B5", "TZZY-333-C6", "TZZY-444-D7", "TZZY-555-E8", "TZZY-666-F9", "TZZY-000-G0"}
+      Key = {"TZZY-ADMIN-7N"} -- Apenas a Key ADM mantida
    }
 })
-
-SendWebhookLog("Key Validada")
 
 -- // CONFIGURAÇÕES GLOBAIS // --
 local _G = {
@@ -77,7 +77,7 @@ local stuckTimer = 0
 local IlegalKeywords = {"dinheirosujo", "dinheiro sujo", "glock", "g18", "ak47", "ak-47", "fuzil", "m4a1", "pistola", "revolver", "dmr", "desert", "deagle", "money", "saco", "maleta", "maconha", "coca", "droga", "tablete", "trouxa", "lsd", "crack", "meta", "algema", "lockpick", "colete", "munição", "pente"}
 local BlacklistKeywords = {"arsenal", "equipar", "pegar", "policia", "pm", "civil", "prf", "guardar", "bancada", "abrir"}
 
--- // LÓGICA DE AUTO FARM (CORREÇÃO DE BUG INDO E VOLTANDO) // --
+-- // LÓGICA DE AUTO FARM // --
 runService.RenderStepped:Connect(function()
     if _G.AutoFarmLixo then
         local char = lp.Character
@@ -85,7 +85,6 @@ runService.RenderStepped:Connect(function()
         local hum = char and char:FindFirstChild("Humanoid")
         
         if hrp and hum then
-            -- Sistema Anti-Stuck (Pula se ficar parado ou tentando chegar no lixo e não conseguir)
             if (hrp.Position - lastPos).Magnitude < 0.05 then
                 stuckTimer = stuckTimer + 1
                 if stuckTimer > 40 then 
@@ -97,7 +96,6 @@ runService.RenderStepped:Connect(function()
             end
             lastPos = hrp.Position
 
-            -- Busca novo alvo se necessário
             if not targetLixo or not targetLixo.Parent or not targetLixo.Enabled then
                 targetLixo = nil
                 coletando = false
@@ -121,7 +119,6 @@ runService.RenderStepped:Connect(function()
                     end
                 end
                 
-                -- Reset para farm infinito se limpar o mapa
                 if not encontrouAlgo and next(LixosColetados) ~= nil then
                     LixosColetados = {}
                 end
@@ -131,20 +128,16 @@ runService.RenderStepped:Connect(function()
                 local targetPos = targetLixo.Parent:IsA("Model") and targetLixo.Parent:GetModelCFrame().p or targetLixo.Parent.Position
                 local distance = (hrp.Position - targetPos).Magnitude
 
-                -- Se estiver longe, move. Se estiver perto (2.8 studs), trava para não bugar indo e voltando.
                 if distance > 2.8 then
                     local direction = (targetPos - hrp.Position).Unit
                     hrp.CFrame = hrp.CFrame + (direction * (_G.LixoSpeed / 6))
                 else
-                    -- CHEGOU: Trava a posição e pula se necessário enquanto coleta
                     coletando = true
                     task.spawn(function()
                         local startCollectTime = tick()
                         while targetLixo and targetLixo.Enabled and targetLixo.Parent do
-                            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) -- Trava no lugar
+                            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) 
                             fireproximityprompt(targetLixo)
-                            
-                            -- Se demorar mais de 3 segundos na mesma lixeira, dá um pulo para "desbugar"
                             if tick() - startCollectTime > 3 then
                                 hum.Jump = true
                                 startCollectTime = tick()
@@ -161,7 +154,7 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // MOVIMENTAÇÃO ORIGINAL MANTIDA // --
+-- // MOVIMENTAÇÃO // --
 runService.RenderStepped:Connect(function()
     local char = lp.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -184,7 +177,7 @@ runService.RenderStepped:Connect(function()
     end
 end)
 
--- // AUTO LOOT ORIGINAL MANTIDO // --
+-- // AUTO LOOT // --
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoLoot and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
@@ -223,7 +216,7 @@ task.spawn(function()
     end
 end)
 
--- // ESP E AIMBOT MANTIDOS // --
+-- // ESP E AIMBOT // --
 local function ApplyESP(target)
     local pgui = lp:WaitForChild("PlayerGui")
     runService.RenderStepped:Connect(function()
@@ -294,3 +287,6 @@ local TabRoubo = Window:CreateTab("Auto Loot")
 TabRoubo:CreateToggle({Name = "VAI PEGA E KITA", Info = "Filtro Anti-Arsenal Ativado", CurrentValue = false, Callback = function(v) _G.AutoLoot = v end})
 
 game.Players.PlayerAdded:Connect(function(p) if _G.BoxEsp then ApplyESP(p) end end)
+
+-- Envia o Log após tudo carregar
+SendWebhookLog("Key Validada: TZZY-ADMIN-7N")
